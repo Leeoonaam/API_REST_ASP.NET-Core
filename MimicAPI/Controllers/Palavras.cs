@@ -1,7 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MimicAPI.Data;
+using MimicAPI.Helpers;
 using MimicAPI.Models;
+using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 
 namespace MimicAPI.Controllers
 {
@@ -17,14 +20,36 @@ namespace MimicAPI.Controllers
 
         [Route("")] // deixar vazio porque assim que entrar no endereço: site.../api/palavras já vai obter todas as palavras sem precisar entrar no metodo
         [HttpGet]
-        public ActionResult ObterTodasPalavras(DateTime? Data)
+        public ActionResult ObterTodasPalavras([FromQuery] PalavraURLQuery URL) // FromQuery: Atributo informando que os valores vem de uma querystring | PalavraURLQuery: classe objeto para os parametros 
         {
             var item = _banco.Palavras.AsQueryable(); //converte para query ao inves de usar dbset para realizar os filtros por data
             //verifica se contem valor
-            if (Data.HasValue)
+            if (URL.Data.HasValue)
             {
-                item = item.Where(a => a.Criado > Data.Value || a.Atualizado > Data.Value);
+                item = item.Where(a => a.Criado > URL.Data.Value || a.Atualizado > URL.Data.Value);
             }
+
+            if (URL.pagNumero.HasValue)
+            {
+                var qtdTotRegistros = item.Count();
+                item = item.Skip((URL.pagNumero.Value - 1) * URL.pagRegistro.Value).Take(URL.pagRegistro.Value); // Paginacao, o skip pula e take pega
+
+                var paginacao = new Paginacao();
+                paginacao.NumeroPagina = URL.pagNumero.Value;
+                paginacao.RegistroPorPagina = URL.pagRegistro.Value;
+                paginacao.TotalRegistros = qtdTotRegistros;
+                paginacao.TotalPaginas = (int) Math.Ceiling((double) qtdTotRegistros / URL.pagRegistro.Value); // Ceiling arredonda o valor (double)
+
+                // resposta no cabeçalho para informar a paginação pro usuario
+                Response.Headers.Add("X-Pagination", JsonConvert.SerializeObject(paginacao));
+
+                // se tentar acessar uma pagina que não existe, erro 404
+                if (URL.pagNumero > paginacao.TotalPaginas)
+                {
+                    return NotFound();
+                }
+            }
+
             return Ok(item);
         }
 
