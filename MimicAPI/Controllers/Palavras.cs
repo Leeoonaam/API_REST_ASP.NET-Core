@@ -23,7 +23,7 @@ namespace MimicAPI.Controllers
             //verifica se contem valor
             if (Data.HasValue)
             {
-                item = item.Where(a => a.Criado > Data.Value);
+                item = item.Where(a => a.Criado > Data.Value || a.Atualizado > Data.Value);
             }
             return Ok(item);
         }
