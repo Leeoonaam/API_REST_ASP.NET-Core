@@ -1,2 +1,2 @@
-# API_REST_V2
- Modelo com Hypermedia
+# README
+ API simples e funcional - Básica para entendimento de código
